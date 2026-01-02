@@ -11,6 +11,7 @@ AB_OTA_PARTITIONS +=
 {%- endfor %}
 
 BOARD_USES_RECOVERY_AS_BOOT := true
+TARGET_NO_RECOVERY := true
 
 {% endif %}
 # Architecture
@@ -68,8 +69,20 @@ BOARD_KERNEL_CMDLINE := {{ boot_configuration.cmdline }}
 {% if boot_configuration.pagesize %}
 BOARD_KERNEL_PAGESIZE := {{ boot_configuration.pagesize }}
 {% endif %}
+{% if boot_configuration.ramdisk_offset %}
+BOARD_RAMDISK_OFFSET := {{ boot_configuration.ramdisk_offset }}
+{% endif %}
+{% if boot_configuration.tags_offset %}
+BOARD_KERNEL_TAGS_OFFSET := {{ boot_configuration.tags_offset }}
+{% endif %}
 {% if boot_configuration.boot_image_info.header_version != "0" %}
 BOARD_MKBOOTIMG_ARGS += --header_version $(BOARD_BOOT_HEADER_VERSION)
+{% endif %}
+{% if boot_configuration.ramdisk_offset %}
+BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
+{% endif %}
+{% if boot_configuration.tags_offset %}
+BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_KERNEL_TAGS_OFFSET)
 {% endif %}
 BOARD_KERNEL_IMAGE_NAME := Image
 {% if boot_configuration.dt %}
@@ -81,6 +94,9 @@ BOARD_INCLUDE_DTB_IN_BOOTIMG := true
 {% if boot_configuration.dtbo %}
 BOARD_KERNEL_SEPARATED_DTBO := true
 {% endif %}
+{% if boot_configuration.is_gki %}
+BOARD_USES_GENERIC_KERNEL_IMAGE := true
+{% endif %}
 TARGET_KERNEL_CONFIG := {{ device_info.codename }}_defconfig
 TARGET_KERNEL_SOURCE := kernel/{{ device_info.manufacturer }}/{{ device_info.codename }}
 
@@ -91,19 +107,46 @@ TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilts/kernel
 {% if boot_configuration.dt %}
 TARGET_PREBUILT_DT := $(DEVICE_PATH)/prebuilts/dt.img
 BOARD_MKBOOTIMG_ARGS += --dt $(TARGET_PREBUILT_DT)
-BOARD_KERNEL_SEPARATED_DT := 
+BOARD_KERNEL_SEPARATED_DT :=
 {% endif %}
 {% if boot_configuration.dtb %}
 TARGET_PREBUILT_DTB := $(DEVICE_PATH)/prebuilts/dtb.img
 BOARD_MKBOOTIMG_ARGS += --dtb $(TARGET_PREBUILT_DTB)
-BOARD_INCLUDE_DTB_IN_BOOTIMG := 
+BOARD_INCLUDE_DTB_IN_BOOTIMG :=
 {% endif %}
 {% if boot_configuration.dtbo %}
 BOARD_PREBUILT_DTBOIMAGE := $(DEVICE_PATH)/prebuilts/dtbo.img
-BOARD_KERNEL_SEPARATED_DTBO := 
+BOARD_KERNEL_SEPARATED_DTBO :=
 {% endif %}
 endif
 
+{% if boot_configuration.vendor_boot_image_info %}
+# Vendor Boot
+{% if boot_configuration.vendor_boot_image_info.header_version %}
+BOARD_VENDOR_BOOT_HEADER_VERSION := {{ boot_configuration.vendor_boot_image_info.header_version }}
+{% endif %}
+{% if boot_configuration.vendor_ramdisk_offset %}
+BOARD_VENDOR_RAMDISK_OFFSET := {{ boot_configuration.vendor_ramdisk_offset }}
+{% endif %}
+{% if boot_configuration.vendor_tags_offset %}
+BOARD_VENDOR_KERNEL_TAGS_OFFSET := {{ boot_configuration.vendor_tags_offset }}
+{% endif %}
+{% if boot_configuration.vendor_boot_image_info.header_version %}
+BOARD_MKVENDORBOOTIMG_ARGS += --header_version $(BOARD_VENDOR_BOOT_HEADER_VERSION)
+{% endif %}
+{% if boot_configuration.vendor_ramdisk_offset %}
+BOARD_MKVENDORBOOTIMG_ARGS += --ramdisk_offset $(BOARD_VENDOR_RAMDISK_OFFSET)
+{% endif %}
+{% if boot_configuration.vendor_tags_offset %}
+BOARD_MKVENDORBOOTIMG_ARGS += --tags_offset $(BOARD_VENDOR_KERNEL_TAGS_OFFSET)
+{% endif %}
+{% if boot_configuration.recovery_in_vendor_boot %}
+# Recovery resources in vendor_boot
+BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT := true
+BOARD_VENDOR_RAMDISK_FRAGMENTS += recovery
+{% endif %}
+
+{% endif %}
 # Partitions
 {% if device_info.device_uses_system_as_root %}
 BOARD_BUILD_SYSTEM_ROOT_IMAGE := true
@@ -158,6 +201,24 @@ TARGET_RECOVERY_PIXEL_FORMAT := {{ device_info.device_pixel_format }}
 {% endif %}
 TARGET_USERIMAGES_USE_EXT4 := true
 TARGET_USERIMAGES_USE_F2FS := true
+
+# TWRP specific build flags
+TW_THEME := portrait_hdpi
+RECOVERY_SDCARD_ON_DATA := true
+TARGET_RECOVERY_QCOM_RTC_FIX := true
+TW_EXCLUDE_DEFAULT_USB_INIT := true
+TW_INCLUDE_NTFS_3G := true
+TW_USE_TOOLBOX := true
+TW_INPUT_BLACKLIST := "hbtp_vm"
+{% if boot_configuration.uses_vendor_boot %}
+TW_USE_VENDOR_BOOT := true
+{% endif %}
+{% if boot_configuration.recovery_in_vendor_boot %}
+TW_RECOVERY_IN_VENDOR_BOOT := true
+{% endif %}
+{% if boot_configuration.is_gki %}
+TW_SUPPORT_GKI_BOOT := true
+{% endif %}
 
 {% if device_info.vendor_build_security_patch %}
 # Security patch level

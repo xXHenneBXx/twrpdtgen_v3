@@ -127,20 +127,16 @@ class DeviceTree:
                 self.rootdir_etc_files.append(file)
         self.rootdir_etc_files.sort(key=strcoll_files_key)
 
-        # Recovery resources (ramdisk) - may be under recovery or boot ramdisk
+        # Recovery resources (ramdisk) - use new boot configuration method
         recovery_resources_location = None
         try:
-            if getattr(self.boot_configuration, "recovery_aik_manager", None):
-                recovery_resources_location = self.boot_configuration.recovery_aik_manager.ramdisk_path
-            elif getattr(self.boot_configuration, "boot_aik_manager", None):
-                recovery_resources_location = self.boot_configuration.boot_aik_manager.ramdisk_path
+            recovery_resources_location = self.boot_configuration.get_recovery_ramdisk_path()
         except Exception:
             logger.debug("While determining ramdisk path", exc_info=True)
 
         self.rootdir_recovery_etc_files = []
-        if recovery_resources_location and Path(recovery_resources_location).exists():
+        if recovery_resources_location and recovery_resources_location.exists():
             try:
-                recovery_resources_location = Path(recovery_resources_location)
                 for file in recovery_resources_location.iterdir():
                     try:
                         # include .rc files found directly in ramdisk root
@@ -171,19 +167,15 @@ class DeviceTree:
         """
         candidates = []
 
-        # 1) recovery ramdisk (if present)
+        # 1) recovery ramdisk (if present) - use boot configuration method
         try:
             ramdisk_path = None
-            if getattr(self, "boot_configuration", None) and getattr(self.boot_configuration, "recovery_aik_manager", None):
-                ramdisk_path = self.boot_configuration.recovery_aik_manager.ramdisk_path
-            elif getattr(self, "boot_configuration", None) and getattr(self.boot_configuration, "boot_aik_manager", None):
-                ramdisk_path = self.boot_configuration.boot_aik_manager.ramdisk_path
+            if getattr(self, "boot_configuration", None):
+                ramdisk_path = self.boot_configuration.get_recovery_ramdisk_path()
 
-            if ramdisk_path:
-                ramdisk_path = Path(ramdisk_path)
-                if ramdisk_path.exists():
-                    for p in ramdisk_path.rglob("fstab*"):
-                        candidates.append(Path(p))
+            if ramdisk_path and ramdisk_path.exists():
+                for p in ramdisk_path.rglob("fstab*"):
+                    candidates.append(Path(p))
         except Exception:
             logger.debug("Error searching ramdisk for fstab", exc_info=True)
 
@@ -312,6 +304,12 @@ class DeviceTree:
 
         self._render_template(rootdir_path, "rootdir_Android.bp", "Android.bp", comment_prefix="//")
         self._render_template(rootdir_path, "rootdir_Android.mk", "Android.mk")
+
+        # Generate vendor_ramdisk makefile if needed (Android 13+ vendor_boot recovery)
+        if self.boot_configuration.recovery_in_vendor_boot:
+            vendor_ramdisk_path = folder / "vendor_ramdisk"
+            if vendor_ramdisk_path.exists():
+                self._render_template(vendor_ramdisk_path, "vendor_ramdisk_Android.mk", "Android.mk")
 
         # rootdir/bin
         rootdir_bin_path = rootdir_path / "bin"

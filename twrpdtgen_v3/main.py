@@ -17,7 +17,8 @@ def main():
 	setup_logging()
 
 	print(f"TWRP device tree generator\n"
-	      f"Version {version}\n")
+	      f"Version {version}\n"
+	      f"Android 13+ Vendor Boot Support Enabled\n")
 
 	parser = ArgumentParser(prog='python3 -m twrpdtgen_v3')
 	parser.add_argument("dump_path", type=Path,

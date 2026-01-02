@@ -1,0 +1,24 @@
+{% include 'LICENSE.jinja2' %}
+
+LOCAL_PATH := $(call my-dir)
+
+{% if boot_configuration.recovery_in_vendor_boot %}
+# Vendor ramdisk recovery fragment
+# This is used when recovery resources are in vendor_boot ramdisk (Android 13+)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := vendor_ramdisk_recovery
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_CLASS := ETC
+LOCAL_MODULE_PATH := $(TARGET_RECOVERY_ROOT_OUT)
+LOCAL_REQUIRED_MODULES := \
+    $(RECOVERY_FSTAB_TARGET)
+
+# Copy vendor_boot ramdisk files to recovery
+LOCAL_POST_INSTALL_CMD := \
+    mkdir -p $(TARGET_RECOVERY_ROOT_OUT)/vendor_ramdisk; \
+    cp -rf $(DEVICE_PATH)/prebuilts/vendor_ramdisk/* $(TARGET_RECOVERY_ROOT_OUT)/vendor_ramdisk/
+
+include $(BUILD_PHONY_PACKAGE)
+
+{% endif %}
